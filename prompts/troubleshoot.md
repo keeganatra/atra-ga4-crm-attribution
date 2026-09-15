@@ -43,3 +43,6 @@ If SQL must change:
 - do not use ellipses or placeholders;
 - provide validation queries proving the fix worked;
 - explain whether historical data needs to be rebuilt.
+
+
+For identity problems, separately test Client ID presence/match and Session ID presence/exact conversion-session match. A good Client ID match with a poor Session ID match usually indicates form timing, stale session values, dynamic-form handling, or CRM mapping/coercion rather than a historical journey join failure.
