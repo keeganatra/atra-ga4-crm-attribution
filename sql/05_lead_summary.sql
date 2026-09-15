@@ -124,6 +124,7 @@ FROM (
       crm_ga_visitor_id_raw,
       crm_ga_visitor_id_trimmed,
       crm_ga_join_id,
+      crm_ga_session_id,
       crm_lead_source,
       crm_campaign_id,
       crm_campaign_name,
@@ -183,6 +184,7 @@ FROM (
     END AS ga_hours_to_sale,
 
     ascnt.ga_total_sessions,
+    COUNTIF(base_capture.ga_is_captured_conversion_session = 1) AS ga_captured_conversion_session_matches,
     plp.ga_sessions_before_lead,
     psp.ga_sessions_before_sale,
     plp.ga_path_before_lead,
@@ -220,6 +222,7 @@ FROM (
 
   FROM crm_core crm
   LEFT JOIN first_visit fv USING (crm_record_id)
+  LEFT JOIN base base_capture USING (crm_record_id)
   LEFT JOIN all_session_counts ascnt USING (crm_record_id)
   LEFT JOIN pre_lead_paths plp USING (crm_record_id)
   LEFT JOIN pre_sale_paths psp USING (crm_record_id)
