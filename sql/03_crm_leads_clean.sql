@@ -18,6 +18,10 @@
 -- identifier captured on the website and stored in the CRM. After
 -- cleaning, crm_ga_join_id should match GA4 user_pseudo_id.
 --
+-- YOUR_GA_SESSION_ID_FIELD should contain the GA4 Session ID captured
+-- at form submission. Preserve it as text. It is not a replacement for
+-- the Client ID; it identifies the exact conversion session.
+--
 -- DEDUPLICATION
 -- The source should resolve to one row per YOUR_CRM_RECORD_ID_FIELD.
 -- If the CRM warehouse contains history/version rows, add the source-
@@ -50,6 +54,7 @@ SELECT
     r'^ga_?',
     ''
   ) AS crm_ga_join_id,
+  CAST(YOUR_GA_SESSION_ID_FIELD AS STRING) AS crm_ga_session_id,
 
   -- Recommended reporting dimensions. Map these to equivalent CRM
   -- fields or remove fields that do not exist in your implementation.
