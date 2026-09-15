@@ -1,12 +1,21 @@
 # Attribution Rules & Customization Legend
 
-This document defines the assumptions that control the attribution model. Treat these as configuration decisions rather than universal attribution rules.
+The ATRA model separates **architecture** from **business rules**. The five-table architecture should remain stable while the rules below are customized to the organization.
 
 ## 1. Identity key
 
 **Default:** GA4 `user_pseudo_id` matched to a GA4 Client ID / visitor ID stored in the CRM.
 
-The website identifier should be captured when a user submits a lead form and stored in a dedicated CRM field. The cleaning layer standardizes both values before matching them.
+### Hidden form field pattern
+
+1. Create a hidden field on lead forms such as `ga_client_id`.
+2. Populate the hidden field with the browser's GA4 Client ID before submission.
+3. Include that value in the form payload.
+4. Map the form field to a dedicated CRM field.
+5. Preserve the value as text in the CRM and downstream warehouse.
+6. Validate that sample CRM values match GA4 `user_pseudo_id` values in BigQuery.
+
+The exact implementation varies by form platform, GTM setup, consent configuration, and CRM.
 
 **Can be customized to:** another persistent analytics identifier, authenticated user ID, or a more advanced identity-resolution strategy.
 
@@ -26,7 +35,7 @@ This establishes the point at which pre-lead sessions stop. A session occurring 
 
 **Can be customized to:** Closed Won, funded, enrolled, admitted, retained, activated, purchase completed, or another downstream business outcome.
 
-If only a DATE is available rather than a timestamp, exact intra-day ordering cannot be known. Document the chosen handling rule.
+Prefer an exact timestamp over a date when available. If only a DATE is available, exact intra-day ordering cannot be known and the chosen handling rule must be documented.
 
 ## 4. Journey unit
 
@@ -34,14 +43,11 @@ If only a DATE is available rather than a timestamp, exact intra-day ordering ca
 
 This is intentionally simple and auditable.
 
-**Optional alternatives:**
+**Optional alternatives:** unique channel changes, source/medium changes, campaign changes, or event-based touchpoints.
 
-- unique channel changes;
-- unique source / medium changes;
-- unique campaign changes;
-- event-based touchpoints.
+Example: `Paid Search > Paid Search > Direct > Direct > Organic Search` represents five sessions. Under a consecutive-channel-change definition it represents three marketing touchpoints: `Paid Search > Direct > Organic Search`.
 
-Example: `Paid Search > Paid Search > Direct > Direct` represents four sessions. Under a consecutive-channel-change definition, it represents two marketing touchpoints: `Paid Search > Direct`.
+Do not use the words **session** and **touchpoint** interchangeably in reporting.
 
 ## 5. Lookback window
 
@@ -49,21 +55,25 @@ Example: `Paid Search > Paid Search > Direct > Direct` represents four sessions.
 
 **Common alternatives:** 30, 60, 90, or 180 days before conversion.
 
-Shortening the lookback window changes both journey counts and attribution paths. Apply the same rule consistently when comparing performance.
+Shortening the lookback window changes journey counts and attribution paths. A lookback rule should be applied relative to the milestone, not simply as a Data Studio date filter.
 
 ## 6. Channel classification
 
 **Default:** GA4 Default Channel Group.
 
-**Can be customized to:** organization-specific classifications such as Paid Search - Brand, Paid Search - Non-Brand, Performance Max, Paid Social, Affiliate, Partner, Email, Organic Search, or other business-specific groups.
+**Can be customized to:** organization-specific classifications such as Paid Search - Brand, Paid Search - Non-Brand, Performance Max, Paid Social Prospecting, Paid Social Retargeting, Affiliate, Partner, Email, Organic Search, or other business-specific groups.
 
-Document campaign-name or source/medium rules explicitly. Avoid manually changing historical classifications without versioning the rule.
+Document campaign-name or source/medium rules explicitly. Prefer implementing custom channel logic upstream in SQL instead of recreating it independently in multiple Data Studio charts.
 
 ## 7. Direct traffic
 
 **Default:** retain Direct as an observed session/touch.
 
-**Optional rule:** ignore or reallocate Direct when a known marketing touch exists earlier in the eligible journey.
+**Optional rules:**
+
+1. Keep Direct exactly as observed.
+2. Exclude Direct from first/last marketing-touch reporting.
+3. Reassign Direct to the most recent known non-Direct marketing touch.
 
 Direct treatment should always be disclosed because changing it can materially alter first-touch, last-touch, and path reporting.
 
@@ -83,13 +93,13 @@ For lead attribution, use the latest session at or before the lead timestamp. Fo
 
 **Default:** chronological sequence of eligible GA4 Default Channel Groups before the milestone.
 
-Paths can instead be generated from source / medium, campaign, or custom channel classification. The selected path dimension should be clearly labeled in Data Studio.
+Paths can instead use source / medium, campaign, custom channel, compressed marketing touchpoints, or a combination such as channel > campaign. The selected path dimension should be clearly labeled in Data Studio.
 
 ## 11. CRM record grain
 
 **Default:** one row per unique CRM lead/conversion record in `lead_summary`.
 
-If an organization uses opportunities, contacts, applications, cases, or another object as its reporting entity, the unique CRM key must be changed accordingly.
+If an organization uses opportunities, contacts, applications, cases, accounts, or another object as its reporting entity, the unique CRM key must be changed accordingly.
 
 Always run the uniqueness QA after changing CRM grain.
 
@@ -102,6 +112,12 @@ One row per configured CRM record. Use for executive KPIs, lead/sale counts, con
 One row per CRM record + associated GA4 session. Use for paths, sequence analysis, and session-level exploration.
 
 Do not aggregate lead/sale totals from `journey_sessions` without deduplicating the CRM record ID.
+
+## 13. Journey attribution vs. incrementality
+
+First touch, last touch, and path reporting are deterministic views of observed customer journeys. They do not prove that a channel caused the conversion.
+
+Markov attribution, Shapley allocation, experiments, causal impact, and media mix modeling should be treated as advanced extensions rather than silently substituted for the core journey model.
 
 ## Change-control rule
 
