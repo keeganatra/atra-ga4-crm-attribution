@@ -74,7 +74,7 @@ Important fields:
 | `crm_sale_date` | Default downstream sale milestone | Sale timing |
 | `crm_is_sold` | 1 when sale milestone exists | Sale count / conversion rate |
 | `crm_ga_join_id` | Cleaned GA visitor identifier | GA4-to-CRM join |
-| `crm_ga_session_id` | STRING | Captured GA4 Session ID for the lead-generating session; used to validate the exact conversion session. |
+| `crm_ga_session_id` | Captured GA4 Session ID for the lead-generating session | Exact conversion-session validation |
 | `crm_lead_source` | CRM lead source | CRM segmentation |
 | `crm_campaign_id` | CRM campaign identifier | CRM segmentation |
 | `crm_campaign_name` | CRM campaign name | CRM segmentation |
@@ -96,6 +96,7 @@ Important fields:
 
 - All selected `crm_*` dimensions from `crm_leads_clean`.
 - All selected session dimensions from `ga_sessions_clean`.
+- `ga_is_captured_conversion_session` — 1 when the matched GA4 session ID equals the Session ID captured with the CRM record.
 - `ga_is_pre_lead_session` — session started on/before the lead milestone.
 - `ga_is_pre_sale_session` — session occurred on/before the downstream sale milestone under the configured sale-date rule.
 
@@ -121,6 +122,7 @@ Important fields:
 | Field | Definition | Data Studio use |
 |---|---|---|
 | `ga_total_sessions` | All matched sessions for the visitor | Average sessions / distribution |
+| `ga_captured_conversion_session_matches` | Count of matched GA4 sessions whose session ID equals the CRM-captured conversion Session ID | Identity/session QA; normally 1 when capture is working |
 | `ga_sessions_before_lead` | Sessions before lead milestone | Avg. sessions to lead |
 | `ga_sessions_before_sale` | Sessions before sale milestone | Avg. sessions to sale |
 
