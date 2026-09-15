@@ -49,3 +49,7 @@ Canonical SQL templates:
 Custom rules:
 [PASTE CUSTOM RULES HERE]
 ```
+
+
+## Identity capture requirement
+Confirm that website forms capture both `ga_client_id` and `ga_session_id`. Map Client ID to the CRM visitor/join field and Session ID to a dedicated CRM field that becomes `crm_ga_session_id`. Do not use Session ID as the historical journey join.
