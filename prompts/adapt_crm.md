@@ -44,3 +44,7 @@ Instructions:
 Before proposing a fix for any error or duplicate-count issue, diagnose which table first introduces the problem.
 
 ---
+
+
+## GA4 session identity
+Map the CRM field containing the captured GA4 Session ID to `crm_ga_session_id` as STRING. Preserve `crm_ga_join_id` as the Client ID-based join to GA4 `user_pseudo_id`. Do not substitute Session ID for Client ID.
