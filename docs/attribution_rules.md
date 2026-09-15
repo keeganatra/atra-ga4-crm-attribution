@@ -13,7 +13,14 @@ The ATRA model separates **architecture** from **business rules**. The five-tabl
 3. Include that value in the form payload.
 4. Map the form field to a dedicated CRM field.
 5. Preserve the value as text in the CRM and downstream warehouse.
-6. Validate that sample CRM values match GA4 `user_pseudo_id` values in BigQuery.
+6. Add a second hidden field such as `ga_session_id` and populate it with the active GA4 Session ID at submission time.
+7. Map Client ID and Session ID into separate CRM fields and preserve both as text.
+8. Validate that sample Client IDs match GA4 `user_pseudo_id` values in BigQuery.
+9. Validate that the captured Session ID matches the exact GA4 session associated with the form submission.
+
+**Important:** Client ID remains the historical journey join. Session ID is a secondary validation key that identifies the exact conversion session; it does not replace Client ID.
+
+For the standard implementation, use `scripts/ga_identity_capture.js` and `docs/form_identity_capture.md`.
 
 The exact implementation varies by form platform, GTM setup, consent configuration, and CRM.
 
