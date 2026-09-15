@@ -36,7 +36,7 @@ Before deploying:
 
 ## Dynamic forms
 
-The standard script re-runs when page content changes and again at form submission, which covers many dynamically rendered forms.
+The standard script re-runs when page content changes, refreshes periodically, refreshes when the user returns to the page, and performs a final best-effort refresh around form interaction/submission. This reduces the risk of retaining a stale Session ID on long-lived pages.
 
 If a form is inside a cross-origin iframe, the parent page cannot write directly into the iframe's fields. In that case, pass the IDs through a supported embed/query-parameter mechanism, use the form vendor's JavaScript API, or inject the capture logic within the iframe-hosted environment.
 
@@ -62,3 +62,12 @@ Before certification, measure:
 - leads with multiple candidate GA4 sessions sharing the same captured session ID after identity matching
 
 Any material mismatch should be diagnosed before changing attribution logic.
+
+
+## GTM-native alternative
+
+For implementations that prefer native GTM variables, Google documents an Analytics Client ID built-in variable and an Analytics Session ID built-in variable. Those values can be written into form fields through a Custom HTML/template implementation. Keep the same CRM field contract: Client ID is the historical identity key; Session ID identifies the exact conversion session.
+
+## Consent behavior
+
+If analytics storage is not available under the site's consent configuration, the GA identifiers may be unavailable. Do not fabricate fallback IDs. Measure the missing-ID rate in QA and document the consent/tracking conditions that explain it.
