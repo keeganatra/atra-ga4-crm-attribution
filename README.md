@@ -54,6 +54,7 @@ V1 uses:
 
 - GA4 `user_pseudo_id` as the website identity key.
 - A corresponding GA4 Client ID / visitor ID stored in the CRM as the CRM-side identity key.
+- A captured GA4 Session ID stored separately to identify the exact conversion session.
 - GA4 sessions as the default journey unit.
 - Lead creation as the first default CRM milestone.
 - Sale as the second default CRM milestone.
@@ -84,6 +85,10 @@ docs/
   data_dictionary.md
   attribution_rules.md
   data_studio_guide.md
+  form_identity_capture.md
+
+scripts/
+  ga_identity_capture.js
 
 prompts/
   new_implementation.md
@@ -97,7 +102,7 @@ prompts/
 ## Implementation sequence
 
 1. Enable the GA4 daily BigQuery export.
-2. Capture the GA4 Client ID on website conversions and map it into the CRM.
+2. Capture both GA4 Client ID and GA4 Session ID on website conversions and map them into dedicated CRM fields.
 3. Complete the implementation configuration and CRM field mapping.
 4. Deploy the five SQL layers in order.
 5. Run the QA suite and resolve failures before reporting.
