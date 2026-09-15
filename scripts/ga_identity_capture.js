@@ -109,7 +109,26 @@
       });
     }
 
-    // Re-populate immediately before form submission.
+    // Refresh periodically so long-lived pages do not retain a stale Session ID.
+    window.setInterval(populateIdentityFields, 60000);
+
+    // Refresh when the user returns to the tab/window.
+    window.addEventListener('focus', populateIdentityFields);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') {
+        populateIdentityFields();
+      }
+    });
+
+    // Re-populate before interaction/submission. Because gtag('get') returns via
+    // callback, the periodic/focus refresh above is the primary safeguard; this
+    // submit hook is a final best-effort refresh rather than the only capture point.
+    document.addEventListener('pointerdown', function (event) {
+      if (event.target && event.target.closest && event.target.closest('form')) {
+        populateIdentityFields();
+      }
+    }, true);
+
     document.addEventListener(
       'submit',
       function () {
