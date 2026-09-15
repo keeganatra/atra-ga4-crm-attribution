@@ -74,6 +74,7 @@ Important fields:
 | `crm_sale_date` | Default downstream sale milestone | Sale timing |
 | `crm_is_sold` | 1 when sale milestone exists | Sale count / conversion rate |
 | `crm_ga_join_id` | Cleaned GA visitor identifier | GA4-to-CRM join |
+| `crm_ga_session_id` | STRING | Captured GA4 Session ID for the lead-generating session; used to validate the exact conversion session. |
 | `crm_lead_source` | CRM lead source | CRM segmentation |
 | `crm_campaign_id` | CRM campaign identifier | CRM segmentation |
 | `crm_campaign_name` | CRM campaign name | CRM segmentation |
