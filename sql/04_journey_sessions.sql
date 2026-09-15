@@ -27,6 +27,7 @@ SELECT
   crm.crm_ga_visitor_id_raw,
   crm.crm_ga_visitor_id_trimmed,
   crm.crm_ga_join_id,
+  crm.crm_ga_session_id,
   crm.crm_lead_source,
   crm.crm_campaign_id,
   crm.crm_campaign_name,
@@ -73,6 +74,15 @@ SELECT
   gs.ga_ecommerce_transaction_id,
   gs.ga_ecommerce_purchase_revenue,
   gs.ga_ecommerce_purchase_revenue_usd,
+
+  -- Exact conversion-session validation. Client ID remains the journey join;
+  -- the captured Session ID identifies which matched session submitted the form.
+  CASE
+    WHEN crm.crm_ga_session_id IS NOT NULL
+      AND CAST(gs.ga_session_id AS STRING) = crm.crm_ga_session_id
+    THEN 1
+    ELSE 0
+  END AS ga_is_captured_conversion_session,
 
   -- Default lead-window classification.
   CASE
