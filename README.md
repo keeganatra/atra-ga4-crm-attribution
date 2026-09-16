@@ -1,8 +1,29 @@
-# ATRA GA4 + CRM Attribution
+# ATRA GA4 + CRM Attribution Toolkit
 
-A reusable implementation framework for connecting GA4 behavioral data to downstream CRM outcomes in BigQuery and visualizing the resulting attribution data in Data Studio.
+An open implementation framework from **ATRA Digital** for connecting GA4 behavioral data to downstream CRM outcomes in BigQuery, reconstructing customer journeys, and preparing attribution-ready reporting in Data Studio.
 
-> **Status:** Private V1 development. The framework is designed for eventual external publication.
+This project is designed to be understandable, adaptable, and auditable. It is not a black-box attribution product.
+
+## Start here
+
+If you are implementing this framework for a new organization, start with:
+
+**[`prompts/new_implementation.md`](prompts/new_implementation.md)**
+
+Then follow this sequence:
+
+1. **Configure** the environment, CRM fields, milestones, timezone, and attribution rules.
+2. **Capture identity** by storing both GA4 Client ID and GA4 Session ID with form submissions.
+3. **Adapt the CRM layer** to the organization's source schema.
+4. **Run SQL layers 01–05 in order.**
+5. **Run all QA queries** and resolve or document failures.
+6. **Certify the model as ready for reporting.**
+7. **Build Data Studio reporting** from the correct reporting grains.
+
+For browser-side identity capture, use:
+
+- [`scripts/ga_identity_capture.js`](scripts/ga_identity_capture.js)
+- [`docs/form_identity_capture.md`](docs/form_identity_capture.md)
 
 ## What this toolkit does
 
@@ -11,9 +32,10 @@ The framework transforms raw GA4 event exports and CRM lead/outcome data into an
 - Which channels, sources, mediums, and campaigns preceded lead creation?
 - Which marketing journeys preceded a downstream sale or equivalent outcome?
 - How many sessions occurred before conversion?
-- What were the first and last known marketing touches before each milestone?
-- How long did users take to progress from first observed website visit to lead and sale?
+- What were the first and last observed touches before each milestone?
+- How long did users take to progress from first observed website visit to lead and downstream outcome?
 - What channel paths commonly precede conversion?
+- Which exact GA4 session produced the CRM conversion when Session ID capture is available?
 
 ## Core architecture
 
@@ -42,27 +64,160 @@ CRM Source ---> 03 crm_leads_clean
 
 ### Five model layers
 
-1. **ga_events_clean** — Standardizes raw GA4 events and extracts commonly needed nested fields.
-2. **ga_sessions_clean** — Converts event-level activity into one record per observed GA4 session.
-3. **crm_leads_clean** — Standardizes the organization's CRM records, milestones, identity key, and reporting dimensions.
-4. **journey_sessions** — Connects CRM outcomes to the GA4 sessions associated with the same visitor and identifies sessions occurring before each milestone.
-5. **lead_summary** — Produces an analysis-friendly lead-level table containing journey counts, paths, first/last touches, time-to-conversion, and downstream outcomes.
+| Layer | Grain | Purpose |
+|---|---|---|
+| **`ga_events_clean`** | One row per GA4 event | Standardizes the raw GA4 export and exposes attribution-relevant event, session, traffic, device, page, and ecommerce fields. |
+| **`ga_sessions_clean`** | One row per GA4 user + session | Converts event-level activity into the default behavioral journey unit. |
+| **`crm_leads_clean`** | One row per CRM attribution record | Standardizes CRM identity, milestones, downstream outcomes, and reporting dimensions. |
+| **`journey_sessions`** | One row per CRM record + matched GA4 session | Connects CRM outcomes to the visitor's observed GA4 sessions and classifies sessions around conversion milestones. |
+| **`lead_summary`** | Exactly one row per CRM record | Produces the reporting-safe attribution layer with first/last touch, paths, session counts, time-to-conversion, and outcomes. |
+
+## Before you run the SQL
+
+The SQL files are **templates, not copy-paste production queries**.
+
+You must adapt the visible `YOUR_*` placeholders to the implementation environment before execution. At minimum, confirm:
+
+- Google Cloud project ID
+- GA4 export dataset
+- attribution dataset
+- CRM source table
+- business timezone
+- CRM record ID
+- lead milestone field and data type
+- downstream outcome field and data type
+- GA4 Client ID CRM field
+- GA4 Session ID CRM field
+- CRM reporting dimensions and optional fields
+
+### The CRM layer requires the most customization
+
+[`sql/03_crm_leads_clean.sql`](sql/03_crm_leads_clean.sql) is intentionally CRM-agnostic and should be adapted to the source system.
+
+Pay particular attention to:
+
+- source data types;
+- CRM deduplication/version-history logic;
+- exact timestamp vs. date-only outcome fields;
+- optional fields that do not exist in the source CRM; and
+- the required one-row-per-`crm_record_id` grain.
+
+Do not deploy downstream layers until `crm_leads_clean` uniqueness is validated.
+
+## Identity model
+
+The default identity relationship is:
+
+**GA4 `user_pseudo_id` ↔ CRM-captured GA4 Client ID**
+
+The Client ID is the historical browser-level identity key used to reconstruct the observed journey.
+
+The framework also captures the **GA4 Session ID** with the form submission. Session ID is stored separately and is used to identify and validate the exact conversion session.
+
+**Session ID supplements Client ID; it does not replace it.**
+
+See [Form Identity Capture](docs/form_identity_capture.md) for the implementation pattern.
 
 ## Default methodology
 
-V1 uses:
+V1 defaults to:
 
 - GA4 `user_pseudo_id` as the website identity key.
-- A corresponding GA4 Client ID / visitor ID stored in the CRM as the CRM-side identity key.
-- A captured GA4 Session ID stored separately to identify the exact conversion session.
+- CRM-captured GA4 Client ID as the CRM-side historical identity key.
+- CRM-captured GA4 Session ID as an exact conversion-session validation key.
 - GA4 sessions as the default journey unit.
 - Lead creation as the first default CRM milestone.
 - Sale as the second default CRM milestone.
-- All available history before a milestone as the default lookback window.
+- All available observed history before a milestone as the default lookback.
 - GA4 Default Channel Group as the default channel classification.
-- Direct traffic retained by default, with optional alternative treatment documented separately.
+- Direct retained as a legitimate observed session by default.
 
-These are defaults rather than requirements. The implementation is intentionally designed so organizations can substitute CRM systems, milestones, dimensions, attribution windows, and channel rules without redesigning the complete architecture.
+These are defaults, not immutable rules. The architecture is intended to remain stable while CRM systems, milestones, lookback windows, dimensions, Direct treatment, and channel definitions are customized.
+
+## Implementation sequence
+
+### 1. Enable GA4 BigQuery export
+Confirm daily `events_*` tables are available and current.
+
+### 2. Capture GA4 identity
+Add hidden form fields for:
+
+- `ga_client_id`
+- `ga_session_id`
+
+Map both into dedicated CRM fields.
+
+### 3. Complete the implementation configuration
+Document the environment, CRM field mapping, milestones, data types, timezone, lookback, and attribution rules.
+
+### 4. Adapt the CRM
+Use [`prompts/adapt_crm.md`](prompts/adapt_crm.md) and [`sql/03_crm_leads_clean.sql`](sql/03_crm_leads_clean.sql) to create the implementation-specific CRM normalization layer.
+
+### 5. Deploy the five SQL layers
+Run in this order:
+
+1. [`01_ga_events_clean.sql`](sql/01_ga_events_clean.sql)
+2. [`02_ga_sessions_clean.sql`](sql/02_ga_sessions_clean.sql)
+3. [`03_crm_leads_clean.sql`](sql/03_crm_leads_clean.sql)
+4. [`04_journey_sessions.sql`](sql/04_journey_sessions.sql)
+5. [`05_lead_summary.sql`](sql/05_lead_summary.sql)
+
+### 6. Run QA
+Run every query in [`qa/`](qa/) before reporting.
+
+The implementation is not ready until record uniqueness, CRM outcomes, identity matching, milestone timing, and channel quality are understood.
+
+### 7. Schedule the refresh
+Schedule the production model to run after upstream GA4 and CRM data are available.
+
+### 8. Build Data Studio
+Use [`docs/data_studio_guide.md`](docs/data_studio_guide.md) and connect each view to the correct table grain.
+
+## Reporting tables
+
+### `lead_summary`
+Use this as the primary source for:
+
+- lead/outcome KPIs
+- conversion rates
+- first-touch attribution
+- last-touch attribution
+- full-path fields
+- time-to-conversion
+- sessions/touches before conversion
+- CRM segmentation
+- executive reporting
+
+Because this table is one row per CRM record, it is the safest primary reporting layer.
+
+### `journey_sessions`
+Use this for:
+
+- customer journey detail
+- session sequence analysis
+- path exploration
+- detailed source / medium / campaign analysis
+- pre-lead and pre-outcome behavior
+- exact captured conversion-session validation
+
+**Do not sum lead or outcome flags directly from `journey_sessions` without deduplicating to `crm_record_id`.** A single CRM record can appear once for every matched session.
+
+## QA / Ready for Reporting gate
+
+Before connecting the model to production reporting, validate:
+
+- `crm_leads_clean` has the expected unique CRM grain;
+- `lead_summary` has exactly one row per CRM record;
+- CRM outcome counts reconcile to the source;
+- Client ID capture rate is measured;
+- GA4 ↔ CRM Client ID match rate is understood;
+- Session ID capture and exact conversion-session match rate are understood;
+- GA4 and CRM date coverage is plausible;
+- no invalid post-lead sessions are classified as pre-lead;
+- channel null/unassigned rates are acceptable or documented; and
+- Data Studio totals reconcile to the correct reporting grain.
+
+See the [QA SQL](qa/) and [data dictionary](docs/data_dictionary.md).
 
 ## Repository structure
 
@@ -82,8 +237,8 @@ qa/
   05_channel_validation.sql
 
 docs/
-  data_dictionary.md
   attribution_rules.md
+  data_dictionary.md
   data_studio_guide.md
   form_identity_capture.md
 
@@ -99,36 +254,37 @@ prompts/
   troubleshoot.md
 ```
 
-## Implementation sequence
+## AI-assisted implementation
 
-1. Enable the GA4 daily BigQuery export.
-2. Capture both GA4 Client ID and GA4 Session ID on website conversions and map them into dedicated CRM fields.
-3. Complete the implementation configuration and CRM field mapping.
-4. Deploy the five SQL layers in order.
-5. Run the QA suite and resolve failures before reporting.
-6. Schedule the production query to refresh after upstream GA4 and CRM data are available.
-7. Connect the approved reporting tables to the ATRA Data Studio template.
-8. Customize milestones, attribution windows, Direct treatment, and channel rules as needed.
+The `prompts/` directory contains implementation prompts intended to help adapt the templates without changing the underlying architecture.
 
-## Reporting tables
+The prompts instruct the AI to:
 
-Use **lead_summary** for lead-level KPIs, outcomes, first/last-touch reporting, time-to-conversion, CRM segmentation, and executive reporting.
+- return complete changed SQL rather than partial snippets;
+- preserve table grains;
+- diagnose root causes before making structural changes;
+- disclose date-only milestone limitations;
+- preserve the GA4 Client ID / Session ID identity model; and
+- rerun QA after material changes.
 
-Use **journey_sessions** for session-level journey analysis, pathing, sequence analysis, and detailed channel/source/medium/campaign exploration.
+Always review generated SQL before running it against production data.
 
-Do not sum lead or sale flags directly from `journey_sessions` without deduplicating to the CRM record grain. A single CRM record can have many journey-session rows.
+## What this model does — and does not — claim
 
-## QA requirement
+This toolkit reconstructs and summarizes **observed customer journeys**.
 
-An implementation should not be considered ready for Data Studio until the QA suite confirms, at minimum:
+First touch, last touch, path reporting, and session-level attribution are deterministic descriptions of observed behavior. They do **not** by themselves prove that a channel caused a conversion.
 
-- expected CRM record uniqueness;
-- CRM outcome counts reconcile to the source system;
-- GA4-to-CRM identity match rate is understood;
-- journey milestone timing is valid;
-- channel/source fields have acceptable null and unassigned rates; and
-- reporting-table grains are understood and validated.
+Experiments, causal impact, media mix modeling, Markov attribution, Shapley allocation, and other incrementality methods should be treated as separate or advanced extensions.
 
-## ATRA methodology
+## Built by ATRA Digital
 
-This framework is maintained by ATRA Digital. It is intended to make GA4 + CRM attribution understandable, customizable, and auditable rather than treating attribution as a black box.
+ATRA Digital built this framework to make the connection between paid media, website behavior, and downstream business outcomes easier to understand and audit.
+
+The goal is straightforward: make attribution useful enough to inform decisions without hiding the methodology behind a black box.
+
+## License
+
+Released under the [MIT License](LICENSE).
+
+You may use, copy, modify, and distribute this toolkit subject to the terms of the license.
