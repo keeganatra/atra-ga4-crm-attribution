@@ -1,6 +1,6 @@
 # ATRA GA4 + CRM Attribution Toolkit
 
-An open implementation framework from **ATRA Digital** for connecting GA4 behavioral data to downstream CRM outcomes in BigQuery, reconstructing customer journeys, and preparing attribution-ready reporting in Data Studio.
+An open implementation framework from **ATRA** for connecting GA4 behavioral data to downstream CRM outcomes in BigQuery, reconstructing customer journeys, and preparing attribution-ready reporting in Data Studio.
 
 This project is designed to be understandable, adaptable, and auditable. It is not a black-box attribution product.
 
@@ -277,9 +277,9 @@ First touch, last touch, path reporting, and session-level attribution are deter
 
 Experiments, causal impact, media mix modeling, Markov attribution, Shapley allocation, and other incrementality methods should be treated as separate or advanced extensions.
 
-## Built by ATRA Digital
+## Built by ATRA
 
-ATRA Digital built this framework to make the connection between paid media, website behavior, and downstream business outcomes easier to understand and audit.
+ATRA built this framework to make the connection between paid media, website behavior, and downstream business outcomes easier to understand and audit.
 
 The goal is straightforward: make attribution useful enough to inform decisions without hiding the methodology behind a black box.
 
